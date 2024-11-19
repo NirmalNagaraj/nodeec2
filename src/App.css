@@ -1,29 +1,8 @@
-/* Enhanced Styling */
-body {
-  font-family: Arial, sans-serif;
-  background-color: #f9f9f9;
-  margin: 0;
-  padding: 0;
-}
-
-h1 {
-  color: #333;
-}
-
-h2 {
-  color: #555;
-  margin-top: 20px;
-}
-
-/* Styled Table */
+/* App.css */
 .table-container {
-  max-height: 400px; /* Makes the table vertically scrollable */
+  max-height: 400px;
   overflow-y: auto;
-  overflow-x: auto; /* Horizontal scroll for wide tables */
-  margin-top: 10px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  background-color: #fff;
+  margin: 20px 0;
 }
 
 .styled-table {
@@ -31,27 +10,21 @@ h2 {
   border-collapse: collapse;
 }
 
-.styled-table th,
-.styled-table td {
-  padding: 12px 15px;
+.styled-table th, .styled-table td {
+  border: 1px solid #ddd;
+  padding: 8px;
   text-align: left;
 }
 
 .styled-table th {
-  background-color: #4CAF50;
-  color: white;
+  background-color: #f4f4f4;
   font-weight: bold;
-  border: 1px solid #ddd;
 }
 
-.styled-table td {
-  border: 1px solid #ddd;
+.styled-table tbody tr:nth-child(even) {
+  background-color: #f9f9f9;
 }
 
-.styled-table tr:nth-child(even) {
-  background-color: #f2f2f2;
-}
-
-.styled-table tr:hover {
-  background-color: #ddd;
+.styled-table tbody tr:hover {
+  background-color: #f1f1f1;
 }
