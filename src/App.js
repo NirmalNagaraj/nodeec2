@@ -32,12 +32,13 @@ const App = () => {
           setNonShipClients(nonShipResponse.data);
           setShipClients(shipResponse.data);
 
-          // Initialize search field with the first key
-          if (vendorResponse.data.length > 0) {
-            const firstNonObjectKey = Object.keys(vendorResponse.data[0]).find(
+          // Initialize search field with the first key of the default tab
+          const defaultData = vendorResponse.data;
+          if (defaultData.length > 0) {
+            const firstNonObjectKey = Object.keys(defaultData[0]).find(
               (key) =>
-                typeof vendorResponse.data[0][key] !== "object" &&
-                vendorResponse.data[0][key] !== null
+                typeof defaultData[0][key] !== "object" &&
+                defaultData[0][key] !== null
             );
             setSearchField(firstNonObjectKey || "");
           }
@@ -70,6 +71,25 @@ const App = () => {
       item[searchField] &&
       item[searchField].toString().toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleTabClick = (tab) => {
+    setActiveTab(tab);
+
+    // Update searchField for the newly selected tab
+    const newData = {
+      vendorDatabase: vendorDatabase,
+      nonShipClients: nonShipClients,
+      shipClients: shipClients,
+    }[tab];
+
+    if (newData.length > 0) {
+      const firstNonObjectKey = Object.keys(newData[0]).find(
+        (key) =>
+          typeof newData[0][key] !== "object" && newData[0][key] !== null
+      );
+      setSearchField(firstNonObjectKey || "");
+    }
+  };
 
   const renderTable = (data) => (
     <div className="table-container">
@@ -107,19 +127,19 @@ const App = () => {
           <div className="tab-container">
             <button
               className={activeTab === "vendorDatabase" ? "active" : ""}
-              onClick={() => setActiveTab("vendorDatabase")}
+              onClick={() => handleTabClick("vendorDatabase")}
             >
               Vendor Database
             </button>
             <button
               className={activeTab === "nonShipClients" ? "active" : ""}
-              onClick={() => setActiveTab("nonShipClients")}
+              onClick={() => handleTabClick("nonShipClients")}
             >
               Non-Ship Clients
             </button>
             <button
               className={activeTab === "shipClients" ? "active" : ""}
-              onClick={() => setActiveTab("shipClients")}
+              onClick={() => handleTabClick("shipClients")}
             >
               Ship Clients
             </button>
