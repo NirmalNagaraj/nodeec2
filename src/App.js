@@ -6,42 +6,37 @@ const App = () => {
   const [vendorDatabase, setVendorDatabase] = useState([]);
   const [nonShipClients, setNonShipClients] = useState([]);
   const [shipClients, setShipClients] = useState([]);
-  const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [vendorServices, setVendorServices] = useState([]);
+  const [overheadData, setOverheadData] = useState({});
   const [activeTab, setActiveTab] = useState("vendorDatabase");
+  const [activeOverheadTab, setActiveOverheadTab] = useState(null);
   const [searchField, setSearchField] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchInitialData = async () => {
       try {
-        const [vendorResponse, nonShipResponse, shipResponse] = await Promise.all([
+        const [vendorResponse, nonShipResponse, shipResponse, vendorServicesResponse] = await Promise.all([
           supabase.from("vendor_database").select("*"),
           supabase.from("nonshipclients").select("*"),
           supabase.from("shipclients").select("*"),
+          supabase.from("vendor_services").select("*"),
         ]);
 
-        if (vendorResponse.error || nonShipResponse.error || shipResponse.error) {
+        if (vendorResponse.error || nonShipResponse.error || shipResponse.error || vendorServicesResponse.error) {
           setError(
             vendorResponse.error?.message ||
             nonShipResponse.error?.message ||
-            shipResponse.error?.message
+            shipResponse.error?.message ||
+            vendorServicesResponse.error?.message
           );
         } else {
           setVendorDatabase(vendorResponse.data);
           setNonShipClients(nonShipResponse.data);
           setShipClients(shipResponse.data);
-
-          // Initialize search field with the first key of the default tab
-          const defaultData = vendorResponse.data;
-          if (defaultData.length > 0) {
-            const firstNonObjectKey = Object.keys(defaultData[0]).find(
-              (key) =>
-                typeof defaultData[0][key] !== "object" &&
-                defaultData[0][key] !== null
-            );
-            setSearchField(firstNonObjectKey || "");
-          }
+          setVendorServices(vendorServicesResponse.data);
         }
       } catch (err) {
         setError(err.message);
@@ -50,8 +45,107 @@ const App = () => {
       }
     };
 
-    fetchData();
+    fetchInitialData();
   }, []);
+
+  const fetchOverheadData = async (table) => {
+    try {
+      setLoading(true);
+
+      // Fetch the data for the selected overhead table
+      const response = await supabase.from(table).select("*");
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      let fetchedData = response.data;
+
+      // Handling references (foreign keys) for certain tables
+      if (table === "overhead_freight_costing_parameters") {
+        const freightResponse = await supabase.from("overhead_freight_forwarding_agents").select("*");
+        if (freightResponse.error) {
+          throw new Error(freightResponse.error.message);
+        }
+
+        fetchedData = fetchedData.map(item => ({
+          ...item,
+          freightAgentData: freightResponse.data.find(agent => agent.id === item.freight_agent_id) || {},
+        }));
+      }
+
+      if (table === "overhead_transporters") {
+        const transportersResponse = await supabase.from("overhead_warehousing_companies").select("*");
+        const networkChandlersResponse = await supabase.from("overhead_network_chandlers").select("*");
+
+        if (transportersResponse.error || networkChandlersResponse.error) {
+          throw new Error("Error fetching related data for transporters.");
+        }
+
+        fetchedData = fetchedData.map(item => ({
+          ...item,
+          warehousingData: transportersResponse.data.find(company => company.id === item.warehousing_company_id) || {},
+          networkChandlerData: networkChandlersResponse.data.find(chandler => chandler.id === item.network_chandler_id) || {},
+        }));
+      }
+
+      if (table === "overhead_ship_agents") {
+        const warehousingResponse = await supabase.from("overhead_warehousing_companies").select("*");
+        const networkChandlersResponse = await supabase.from("overhead_network_chandlers").select("*");
+
+        if (warehousingResponse.error || networkChandlersResponse.error) {
+          throw new Error("Error fetching related data for ship agents.");
+        }
+
+        fetchedData = fetchedData.map(item => ({
+          ...item,
+          warehousingData: warehousingResponse.data.find(company => company.id === item.warehousing_company_id) || {},
+          networkChandlerData: networkChandlersResponse.data.find(chandler => chandler.id === item.network_chandler_id) || {},
+        }));
+      }
+
+      // Store the fetched data for the specific table in the overheadData state
+      setOverheadData((prevData) => ({
+        ...prevData,
+        [table]: fetchedData,
+      }));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTabClick = (tab) => {
+    setActiveTab(tab);
+    if (tab === "overheads") {
+      // When "Overheads" is clicked, initialize sub-tabs for the overhead tables
+      const overheadTables = [
+        "overhead_warehousing_companies",
+        "overhead_vms_operations_team",
+        "overhead_exports_imports_agents",
+        "overhead_freight_forwarding_agents",
+        "overhead_customs_house_agents",
+        "overhead_labourers",
+        "overhead_transporters",
+        "overhead_network_chandlers",
+        "overhead_ship_agents",
+      ];
+
+      // Set the first overhead table as active by default
+      if (overheadTables.length > 0) {
+        setActiveOverheadTab(overheadTables[0]);
+        fetchOverheadData(overheadTables[0]);
+      }
+    }
+  };
+
+  const handleOverheadTabClick = (table) => {
+    setActiveOverheadTab(table);
+    if (!overheadData[table]) {
+      fetchOverheadData(table);
+    }
+  };
 
   const getActiveData = () => {
     switch (activeTab) {
@@ -61,6 +155,10 @@ const App = () => {
         return nonShipClients;
       case "shipClients":
         return shipClients;
+      case "vendorServices":
+        return vendorServices;
+      case "overheads":
+        return overheadData[activeOverheadTab] || [];
       default:
         return [];
     }
@@ -71,25 +169,6 @@ const App = () => {
       item[searchField] &&
       item[searchField].toString().toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const handleTabClick = (tab) => {
-    setActiveTab(tab);
-
-    // Update searchField for the newly selected tab
-    const newData = {
-      vendorDatabase: vendorDatabase,
-      nonShipClients: nonShipClients,
-      shipClients: shipClients,
-    }[tab];
-
-    if (newData.length > 0) {
-      const firstNonObjectKey = Object.keys(newData[0]).find(
-        (key) =>
-          typeof newData[0][key] !== "object" && newData[0][key] !== null
-      );
-      setSearchField(firstNonObjectKey || "");
-    }
-  };
 
   const renderTable = (data) => (
     <div className="table-container">
@@ -143,7 +222,43 @@ const App = () => {
             >
               Ship Clients
             </button>
+            <button
+              className={activeTab === "vendorServices" ? "active" : ""}
+              onClick={() => handleTabClick("vendorServices")}
+            >
+              Vendor Services
+            </button>
+            <button
+              className={activeTab === "overheads" ? "active" : ""}
+              onClick={() => handleTabClick("overheads")}
+            >
+              Overheads
+            </button>
           </div>
+
+          {activeTab === "overheads" && (
+            <div className="sub-tab-container">
+              {[
+                "overhead_warehousing_companies",
+                "overhead_vms_operations_team",
+                "overhead_exports_imports_agents",
+                "overhead_freight_forwarding_agents",
+                "overhead_customs_house_agents",
+                "overhead_labourers",
+                "overhead_transporters",
+                "overhead_network_chandlers",
+                "overhead_ship_agents",
+              ].map((table) => (
+                <button
+                  key={table}
+                  className={activeOverheadTab === table ? "active" : ""}
+                  onClick={() => handleOverheadTabClick(table)}
+                >
+                  {table}
+                </button>
+              ))}
+            </div>
+          )}
 
           <div className="search-container">
             <select
@@ -165,7 +280,7 @@ const App = () => {
             />
           </div>
 
-          <h2>{activeTab}</h2>
+          <h2>{activeTab === "overheads" ? activeOverheadTab : activeTab}</h2>
           {renderTable(filteredData)}
         </>
       )}

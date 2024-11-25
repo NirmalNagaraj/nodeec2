@@ -30,7 +30,19 @@ h1, h2 {
   background-color: #007bff;
   color: white;
 }
+.sub-tab-container button {
+  margin: 5px;
+  padding: 8px;
+  cursor: pointer;
+  background-color: #e0e0e0;
+  border: 1px solid #ccc;
+  transition: background-color 0.3s;
+}
 
+.sub-tab-container button.active {
+  background-color: #008cba;
+  color: white;
+}
 .search-container {
   display: flex;
   justify-content: center;
