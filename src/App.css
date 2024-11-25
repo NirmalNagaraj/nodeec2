@@ -1,30 +1,99 @@
-/* App.css */
+.app-container {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+h1, h2 {
+  text-align: center;
+}
+
+.error {
+  color: red;
+}
+
+.tab-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.tab-container button {
+  padding: 10px 20px;
+  margin: 0 5px;
+  border: none;
+  background-color: #f0f0f0;
+  cursor: pointer;
+}
+
+.tab-container button.active {
+  background-color: #007bff;
+  color: white;
+}
+
+.search-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.search-container select,
+.search-container input {
+  padding: 5px 10px;
+  margin: 0 5px;
+}
+
 .table-container {
-  max-height: 400px;
-  overflow-y: auto;
-  margin: 20px 0;
+  overflow-x: auto;
 }
 
 .styled-table {
   width: 100%;
   border-collapse: collapse;
+  font-size: 0.9em;
+  font-family: sans-serif;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
 }
 
-.styled-table th, .styled-table td {
-  border: 1px solid #ddd;
-  padding: 8px;
+.styled-table thead tr {
+  background-color: #009879;
+  color: #ffffff;
   text-align: left;
 }
 
-.styled-table th {
-  background-color: #f4f4f4;
-  font-weight: bold;
+.styled-table th,
+.styled-table td {
+  padding: 12px 15px;
 }
 
-.styled-table tbody tr:nth-child(even) {
-  background-color: #f9f9f9;
+.styled-table tbody tr {
+  border-bottom: 1px solid #dddddd;
 }
 
-.styled-table tbody tr:hover {
-  background-color: #f1f1f1;
+.styled-table tbody tr:nth-of-type(even) {
+  background-color: #f3f3f3;
 }
+
+.styled-table tbody tr:last-of-type {
+  border-bottom: 2px solid #009879;
+}
+
+@media (max-width: 600px) {
+  .tab-container {
+    flex-direction: column;
+  }
+
+  .tab-container button {
+    margin: 5px 0;
+  }
+
+  .search-container {
+    flex-direction: column;
+  }
+
+  .search-container select,
+  .search-container input {
+    margin: 5px 0;
+  }
+}
+

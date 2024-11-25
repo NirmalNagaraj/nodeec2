@@ -1,45 +1,46 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "./supabase";
-import { Tab, Tabs, TabList, TabPanel } from "react-tabs";
-import "react-tabs/style/react-tabs.css";
 import "./App.css";
 
 const App = () => {
   const [vendorDatabase, setVendorDatabase] = useState([]);
-  const [vessel, setVessel] = useState([]);
-  const [client, setClient] = useState([]);
-  const [vendorV2, setVendorV2] = useState([]);
+  const [nonShipClients, setNonShipClients] = useState([]);
+  const [shipClients, setShipClients] = useState([]);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("vendorDatabase");
+  const [searchField, setSearchField] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
 
-  // Fetch data
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [vendorResponse, vesselResponse, clientResponse, vendorV2Response] = await Promise.all([
-          supabase.from("vendor_database").select("*"),
-          supabase.from("vessel").select("*"),
-          supabase.from("client").select("*"),
-          supabase.from("vendor_v2").select("*"),
+        const [vendorResponse, nonShipResponse, shipResponse] = await Promise.all([
+          supabase.from("vendordatabase").select("*"),
+          supabase.from("nonshipclients").select("*"),
+          supabase.from("shipclients").select("*"),
         ]);
 
-        if (
-          vendorResponse.error ||
-          vesselResponse.error ||
-          clientResponse.error ||
-          vendorV2Response.error
-        ) {
+        if (vendorResponse.error || nonShipResponse.error || shipResponse.error) {
           setError(
             vendorResponse.error?.message ||
-              vesselResponse.error?.message ||
-              clientResponse.error?.message ||
-              vendorV2Response.error?.message
+            nonShipResponse.error?.message ||
+            shipResponse.error?.message
           );
         } else {
           setVendorDatabase(vendorResponse.data);
-          setVessel(vesselResponse.data);
-          setClient(clientResponse.data);
-          setVendorV2(vendorV2Response.data);
+          setNonShipClients(nonShipResponse.data);
+          setShipClients(shipResponse.data);
+
+          // Initialize search field with the first key
+          if (vendorResponse.data.length > 0) {
+            const firstNonObjectKey = Object.keys(vendorResponse.data[0]).find(
+              (key) =>
+                typeof vendorResponse.data[0][key] !== "object" &&
+                vendorResponse.data[0][key] !== null
+            );
+            setSearchField(firstNonObjectKey || "");
+          }
         }
       } catch (err) {
         setError(err.message);
@@ -50,6 +51,25 @@ const App = () => {
 
     fetchData();
   }, []);
+
+  const getActiveData = () => {
+    switch (activeTab) {
+      case "vendorDatabase":
+        return vendorDatabase;
+      case "nonShipClients":
+        return nonShipClients;
+      case "shipClients":
+        return shipClients;
+      default:
+        return [];
+    }
+  };
+
+  const filteredData = getActiveData().filter(
+    (item) =>
+      item[searchField] &&
+      item[searchField].toString().toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const renderTable = (data) => (
     <div className="table-container">
@@ -63,8 +83,10 @@ const App = () => {
         <tbody>
           {data.map((row, index) => (
             <tr key={index}>
-              {Object.values(row).map((value, i) => (
-                <td key={i}>{value || "-"}</td>
+              {Object.entries(row).map(([key, value]) => (
+                <td key={key}>
+                  {value && typeof value === "object" ? JSON.stringify(value) : value || "-"}
+                </td>
               ))}
             </tr>
           ))}
@@ -74,41 +96,58 @@ const App = () => {
   );
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h1 style={{ textAlign: "center" }}>Data Viewer</h1>
+    <div className="app-container">
+      <h1>Data Viewer</h1>
       {loading ? (
         <p>Loading...</p>
       ) : error ? (
-        <p style={{ color: "red" }}>Error: {error}</p>
+        <p className="error">Error: {error}</p>
       ) : (
-        <Tabs>
-          <TabList>
-            <Tab>Vendor Database</Tab>
-            <Tab>Vessel</Tab>
-            <Tab>Client</Tab>
-            <Tab>Vendor V2</Tab>
-          </TabList>
+        <>
+          <div className="tab-container">
+            <button
+              className={activeTab === "vendorDatabase" ? "active" : ""}
+              onClick={() => setActiveTab("vendorDatabase")}
+            >
+              Vendor Database
+            </button>
+            <button
+              className={activeTab === "nonShipClients" ? "active" : ""}
+              onClick={() => setActiveTab("nonShipClients")}
+            >
+              Non-Ship Clients
+            </button>
+            <button
+              className={activeTab === "shipClients" ? "active" : ""}
+              onClick={() => setActiveTab("shipClients")}
+            >
+              Ship Clients
+            </button>
+          </div>
 
-          <TabPanel>
-            <h2>Vendor Database</h2>
-            {renderTable(vendorDatabase)}
-          </TabPanel>
+          <div className="search-container">
+            <select
+              value={searchField}
+              onChange={(e) => setSearchField(e.target.value)}
+            >
+              {getActiveData().length > 0 &&
+                Object.keys(getActiveData()[0]).map((key) => (
+                  <option key={key} value={key}>
+                    {key}
+                  </option>
+                ))}
+            </select>
+            <input
+              type="text"
+              placeholder="Search..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
 
-          <TabPanel>
-            <h2>Vessel</h2>
-            {renderTable(vessel)}
-          </TabPanel>
-
-          <TabPanel>
-            <h2>Client</h2>
-            {renderTable(client)}
-          </TabPanel>
-
-          <TabPanel>
-            <h2>Vendor V2</h2>
-            {renderTable(vendorV2)}
-          </TabPanel>
-        </Tabs>
+          <h2>{activeTab}</h2>
+          {renderTable(filteredData)}
+        </>
       )}
     </div>
   );
