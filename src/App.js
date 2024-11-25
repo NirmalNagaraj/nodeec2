@@ -16,7 +16,7 @@ const App = () => {
     const fetchData = async () => {
       try {
         const [vendorResponse, nonShipResponse, shipResponse] = await Promise.all([
-          supabase.from("vendordatabase").select("*"),
+          supabase.from("vendor_database").select("*"),
           supabase.from("nonshipclients").select("*"),
           supabase.from("shipclients").select("*"),
         ]);
